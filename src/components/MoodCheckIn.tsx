@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useCallback } from 'react';
+import React, { useState, useCallback } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { motion, useReducedMotion } from 'framer-motion';
@@ -13,7 +13,8 @@ import { Slider } from '@/components/ui/slider';
 import TriggerTracker from '@/components/TriggerTracker';
 import type { MoodLevel, TriggerTag } from '@/types';
 
-const MOOD_OPTIONS: Array<{
+/** Mood level options with weather metaphor labels and emojis. */
+const MOOD_OPTIONS: ReadonlyArray<{
   level: MoodLevel;
   emoji: string;
   label: string;
@@ -23,18 +24,33 @@ const MOOD_OPTIONS: Array<{
   { level: 3, emoji: '🌧', label: 'Light Rain — Some turbulence' },
   { level: 4, emoji: '🌤', label: 'Partly Cloudy — Mostly steady' },
   { level: 5, emoji: '☀️', label: 'Clear Skies — You\'re in flow' },
-];
+] as const;
 
-export default function MoodCheckIn() {
+/** Color tokens for each mood level (1=red through 5=cyan). */
+const MOOD_COLORS: Record<MoodLevel, string> = {
+  1: '#EF4444',
+  2: '#F97316',
+  3: '#EAB308',
+  4: '#22C55E',
+  5: '#06B6D4',
+};
+
+/**
+ * MoodCheckIn form component.
+ * Provides emoji buttons, a slider, trigger tags, and a note textarea
+ * for the user to log their daily mood. Validated with Zod + React Hook Form.
+ */
+export default function MoodCheckIn(): React.JSX.Element {
   const prefersReduced = useReducedMotion();
   const addEntry = useWellnessStore((s) => s.addEntry);
   const [selectedTriggers, setSelectedTriggers] = useState<TriggerTag[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [currentMood, setCurrentMood] = useState<MoodLevel>(3);
+  const [noteValue, setNoteValue] = useState('');
 
   const {
     register,
     handleSubmit,
-    watch,
     setValue,
     reset,
     formState: { errors },
@@ -49,36 +65,43 @@ export default function MoodCheckIn() {
     },
   });
 
-  const currentMood = watch('mood') as MoodLevel;
-  const noteValue = watch('note') ?? '';
   const currentLabel =
     MOOD_OPTIONS.find((o) => o.level === currentMood)?.label ?? '';
 
   const handleMoodSelect = useCallback(
-    (level: MoodLevel) => {
+    (level: MoodLevel): void => {
+      setCurrentMood(level);
       setValue('mood', level, { shouldValidate: true });
     },
     [setValue]
   );
 
   const handleSliderChange = useCallback(
-    (value: number | readonly number[]) => {
-      const v = Array.isArray(value) ? value[0] : value;
-      setValue('mood', v as MoodLevel, { shouldValidate: true });
+    (value: number | readonly number[]): void => {
+      const v = (Array.isArray(value) ? value[0] : value) as MoodLevel;
+      setCurrentMood(v);
+      setValue('mood', v, { shouldValidate: true });
     },
     [setValue]
   );
 
   const handleTriggersChange = useCallback(
-    (triggers: TriggerTag[]) => {
+    (triggers: TriggerTag[]): void => {
       setSelectedTriggers(triggers);
       setValue('triggers', triggers);
     },
     [setValue]
   );
 
+  const handleNoteChange = useCallback(
+    (e: React.ChangeEvent<HTMLTextAreaElement>): void => {
+      setNoteValue(e.target.value);
+    },
+    []
+  );
+
   const onSubmit = useCallback(
-    async (data: MoodEntryForm) => {
+    async (data: MoodEntryForm): Promise<void> => {
       setIsSubmitting(true);
       try {
         addEntry({
@@ -92,11 +115,38 @@ export default function MoodCheckIn() {
         });
         reset();
         setSelectedTriggers([]);
+        setCurrentMood(3);
+        setNoteValue('');
       } finally {
         setIsSubmitting(false);
       }
     },
     [addEntry, selectedTriggers, reset]
+  );
+
+  const handleKeyDown = useCallback(
+    (e: React.KeyboardEvent<HTMLButtonElement>, index: number): void => {
+      let nextIndex = -1;
+      if (e.key === 'ArrowRight' || e.key === 'ArrowDown') {
+        nextIndex = (index + 1) % MOOD_OPTIONS.length;
+      } else if (e.key === 'ArrowLeft' || e.key === 'ArrowUp') {
+        nextIndex = (index - 1 + MOOD_OPTIONS.length) % MOOD_OPTIONS.length;
+      }
+
+      if (nextIndex !== -1) {
+        e.preventDefault();
+        const nextOption = MOOD_OPTIONS[nextIndex];
+        handleMoodSelect(nextOption.level);
+        
+        // Query only buttons within our own radiogroup
+        const container = e.currentTarget.parentElement;
+        if (container) {
+          const buttons = container.querySelectorAll<HTMLButtonElement>('[role="radio"]');
+          buttons[nextIndex]?.focus();
+        }
+      }
+    },
+    [handleMoodSelect]
   );
 
   const motionProps = prefersReduced
@@ -126,39 +176,37 @@ export default function MoodCheckIn() {
         aria-label="Select your mood"
         className="flex justify-center gap-3 md:gap-5 mb-4"
       >
-        {MOOD_OPTIONS.map((option) => (
-          <motion.button
-            key={option.level}
-            type="button"
-            role="radio"
-            aria-checked={currentMood === option.level}
-            aria-label={`Mood level ${option.level}: ${option.label}`}
-            onClick={() => handleMoodSelect(option.level)}
-            className={`text-3xl md:text-4xl p-3 md:p-4 rounded-2xl border-2 transition-all cursor-pointer min-w-[44px] min-h-[44px] flex items-center justify-center ${
-              currentMood === option.level
-                ? 'border-[#7C3AED] bg-[#7C3AED]/10 shadow-[0_0_20px_rgba(124,58,237,0.3)] scale-110'
-                : 'border-transparent bg-white/5 hover:bg-white/10'
-            }`}
-            {...motionProps}
-          >
-            <span role="img" aria-hidden="true">
-              {option.emoji}
-            </span>
-          </motion.button>
-        ))}
+        {MOOD_OPTIONS.map((option, index) => {
+          const isSelected = currentMood === option.level;
+          return (
+            <motion.button
+              key={option.level}
+              type="button"
+              role="radio"
+              aria-checked={isSelected}
+              aria-label={`Mood level ${option.level}: ${option.label}`}
+              onClick={() => handleMoodSelect(option.level)}
+              onKeyDown={(e) => handleKeyDown(e, index)}
+              tabIndex={isSelected ? 0 : -1}
+              className={`text-3xl md:text-4xl p-3 md:p-4 rounded-2xl border-2 transition-all cursor-pointer min-w-[44px] min-h-[44px] flex items-center justify-center ${
+                isSelected
+                  ? 'border-[#7C3AED] bg-[#7C3AED]/10 shadow-[0_0_20px_rgba(124,58,237,0.3)] scale-110'
+                  : 'border-transparent bg-white/5 hover:bg-white/10'
+              }`}
+              {...motionProps}
+            >
+              <span role="img" aria-hidden="true">
+                {option.emoji}
+              </span>
+            </motion.button>
+          );
+        })}
       </div>
 
       {/* Dynamic mood label */}
       <p
         className="text-center text-sm font-medium mb-6"
-        style={{
-          color:
-            MOOD_OPTIONS.find((o) => o.level === currentMood)
-              ? ['#EF4444', '#F97316', '#EAB308', '#22C55E', '#06B6D4'][
-                  currentMood - 1
-                ]
-              : '#64748B',
-        }}
+        style={{ color: MOOD_COLORS[currentMood] }}
         aria-live="polite"
       >
         {currentLabel}
@@ -208,7 +256,7 @@ export default function MoodCheckIn() {
             maxLength={200}
             className="bg-white/5 border-white/10 text-[#F1F5F9] placeholder:text-[#334155] min-h-[80px] resize-none"
             aria-describedby="note-char-count note-error"
-            {...register('note')}
+            {...register('note', { onChange: handleNoteChange })}
           />
           <span
             id="note-char-count"

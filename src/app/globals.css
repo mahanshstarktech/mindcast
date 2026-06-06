@@ -170,3 +170,15 @@ body {
 .animate-bounce-gentle {
   animation: bounce-gentle 2s ease-in-out infinite;
 }
+
+/* Performance: skip rendering for off-screen sections */
+section[aria-label] {
+  content-visibility: auto;
+  contain-intrinsic-size: auto 600px;
+}
+
+/* Performance: GPU-accelerated animations */
+.glass-card {
+  will-change: transform;
+}
+

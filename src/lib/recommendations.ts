@@ -1,12 +1,21 @@
-import { DailyEntry, Recommendation, TriggerTag } from '@/types';
+import type { DailyEntry, Recommendation, TriggerTag } from '@/types';
 
+/**
+ * Pure, deterministic recommendation engine.
+ * Analyzes the user's current mood, triggers, and weekly history to produce
+ * 0–4 prioritized wellness recommendations. No AI, no network calls.
+ *
+ * @param weeklyEntries - The user's entries from the past 7 days, sorted chronologically.
+ * @param todayEntry - The user's entry for today, or null if not yet submitted.
+ * @returns An array of up to 4 recommendations, sorted by priority (high → low).
+ */
 export function getRecommendations(
   weeklyEntries: DailyEntry[],
   todayEntry: DailyEntry | null
 ): Recommendation[] {
-  const recs: Recommendation[] = [];
   if (!todayEntry) return [];
 
+  const recs: Recommendation[] = [];
   const { mood, triggers } = todayEntry;
   const last3 = weeklyEntries.slice(-3);
 
@@ -84,12 +93,14 @@ export function getRecommendations(
     });
   }
 
-  // RULE 7: Top 2 weekly triggers pattern
+  // RULE 7: Top weekly trigger pattern
   if (weeklyEntries.length >= 3) {
     const freq: Record<string, number> = {};
-    weeklyEntries.forEach((e) =>
-      e.triggers.forEach((t) => (freq[t] = (freq[t] ?? 0) + 1))
-    );
+    for (const e of weeklyEntries) {
+      for (const t of e.triggers) {
+        freq[t] = (freq[t] ?? 0) + 1;
+      }
+    }
     const topTwo = Object.entries(freq)
       .sort((a, b) => b[1] - a[1])
       .slice(0, 2)
@@ -113,6 +124,7 @@ export function getRecommendations(
     .slice(0, 4);
 }
 
+/** Formats a kebab-case trigger tag into a Title Case display string. */
 function formatTrigger(tag: TriggerTag): string {
   return tag
     .split('-')

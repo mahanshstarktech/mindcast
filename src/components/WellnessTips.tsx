@@ -81,14 +81,17 @@ export default function WellnessTips() {
   const getWeeklyEntries = useWellnessStore((s) => s.getWeeklyEntries);
   const toggleResetMode = useWellnessStore((s) => s.toggleResetMode);
 
-  const todayEntry = getTodayEntry();
-  const weeklyEntries = getWeeklyEntries();
+  const todayEntry = useMemo(() => {
+    return entries.length >= 0 ? getTodayEntry() : null;
+  }, [entries, getTodayEntry]);
 
-  const recommendations = useMemo(
-    () => getRecommendations(weeklyEntries, todayEntry),
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    [entries]
-  );
+  const weeklyEntries = useMemo(() => {
+    return entries.length >= 0 ? getWeeklyEntries() : [];
+  }, [entries, getWeeklyEntries]);
+
+  const recommendations = useMemo(() => {
+    return getRecommendations(weeklyEntries, todayEntry);
+  }, [weeklyEntries, todayEntry]);
 
   const handleAction = useCallback(
     (action: string) => {

@@ -80,12 +80,23 @@ describe('MoodCheckIn', () => {
     expect(textarea).toHaveAttribute('maxLength', '200');
   });
 
-  it('is keyboard navigable', async () => {
+  it('is keyboard navigable via arrow keys and tabs', async () => {
     render(<MoodCheckIn />);
     const user = userEvent.setup();
-    const firstRadio = screen.getByLabelText(/Mood level 1/);
-    await user.click(firstRadio);
-    expect(firstRadio).toHaveAttribute('aria-checked', 'true');
+    const secondRadio = screen.getByLabelText(/Mood level 2/);
+    const thirdRadio = screen.getByLabelText(/Mood level 3/);
+    
+    // Third radio is selected by default, so it should have tabIndex = 0
+    expect(thirdRadio).toHaveAttribute('tabIndex', '0');
+    expect(secondRadio).toHaveAttribute('tabIndex', '-1');
+    
+    thirdRadio.focus();
+    expect(thirdRadio).toHaveFocus();
+    
+    // Press ArrowLeft to select and focus the second radio
+    await user.keyboard('[ArrowLeft]');
+    expect(secondRadio).toHaveAttribute('aria-checked', 'true');
+    expect(secondRadio).toHaveFocus();
   });
 
   it('has a submit button', () => {

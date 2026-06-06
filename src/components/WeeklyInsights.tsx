@@ -82,8 +82,19 @@ export default function WeeklyInsights() {
   const getWeeklyStats = useWellnessStore((s) => s.getWeeklyStats);
   const getWeeklyEntries = useWellnessStore((s) => s.getWeeklyEntries);
 
-  const weeklyEntries = getWeeklyEntries();
-  const stats = useMemo(() => getWeeklyStats(), [entries]); // eslint-disable-line react-hooks/exhaustive-deps
+  const weeklyEntries = useMemo(() => {
+    return entries.length >= 0 ? getWeeklyEntries() : [];
+  }, [entries, getWeeklyEntries]);
+
+  const stats = useMemo(() => {
+    return entries.length >= 0 ? getWeeklyStats() : {
+      avgMood: 0,
+      peakStressDay: '',
+      recoveryStreak: 0,
+      topTriggers: [],
+      moodTrend: [],
+    };
+  }, [entries, getWeeklyStats]);
 
   const triggerChartData = useMemo(() => {
     return stats.topTriggers.map((t) => ({

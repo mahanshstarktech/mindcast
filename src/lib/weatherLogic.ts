@@ -1,5 +1,6 @@
-import { MoodLevel, WeatherState } from '@/types';
+import type { MoodLevel, WeatherState } from '@/types';
 
+/** Maps a numeric mood level (1–5) to its corresponding weather state. */
 export function getMoodWeather(mood: MoodLevel): WeatherState {
   const map: Record<MoodLevel, WeatherState> = {
     5: 'sunny',
@@ -11,6 +12,7 @@ export function getMoodWeather(mood: MoodLevel): WeatherState {
   return map[mood];
 }
 
+/** Returns the emoji character for a given weather state. */
 export function getWeatherEmoji(weather: WeatherState): string {
   const map: Record<WeatherState, string> = {
     sunny: '☀️',
@@ -22,6 +24,7 @@ export function getWeatherEmoji(weather: WeatherState): string {
   return map[weather];
 }
 
+/** Returns the human-readable label for a given weather state. */
 export function getWeatherLabel(weather: WeatherState): string {
   const map: Record<WeatherState, string> = {
     sunny: 'Clear Skies',
@@ -33,6 +36,7 @@ export function getWeatherLabel(weather: WeatherState): string {
   return map[weather];
 }
 
+/** Returns the color token (hex) for a given mood level. */
 export function getMoodColor(mood: MoodLevel): string {
   const map: Record<MoodLevel, string> = {
     5: '#06B6D4',

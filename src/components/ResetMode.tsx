@@ -207,7 +207,7 @@ function MicroBreakTimer() {
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   useEffect(() => {
-    if (!isRunning || seconds <= 0) return;
+    if (!isRunning) return;
 
     intervalRef.current = setInterval(() => {
       setSeconds((prev) => {
@@ -216,7 +216,6 @@ function MicroBreakTimer() {
           setIsComplete(true);
           return 0;
         }
-        // Announce every 30 seconds
         if (prev % 30 === 0) {
           const m = Math.floor(prev / 60);
           const s = prev % 60;
@@ -229,7 +228,7 @@ function MicroBreakTimer() {
     return () => {
       if (intervalRef.current) clearInterval(intervalRef.current);
     };
-  }, [isRunning, seconds]);
+  }, [isRunning]);
 
   const progress = ((300 - seconds) / 300) * 100;
   const minutes = Math.floor(seconds / 60);
